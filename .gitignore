@@ -31,3 +31,12 @@ Thumbs.db
 
 # Logs
 *.log
+# Datasets grandes
+data/raw/bd_matricula_sector_estatal_2021_2025.xlsx
+data/processed/conare_matricula_limpio.csv
+
+# Entorno virtual
+.venv/
+
+# PyCharm
+.idea/
