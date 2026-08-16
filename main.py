@@ -1,235 +1,327 @@
-from src.datos.gestor_datos import GestorDatos
 import os
-import glob
+
+from src.eda.procesador_eda import ProcesadorEDA
+from src.visualizacion.visualizador import Visualizador
+from src.basedatos.gestor_base_datos import GestorBaseDatos
+from src.analisis.analizador_academico import AnalizadorAcademico
+
+from cargar_datos_sql import cargar_datasets_sql
 
 
 def main():
 
+    print("\n")
+    print("========================================")
+    print("PROYECTO DE DESERCIÓN ESTUDIANTIL")
+    print("========================================")
+
     # ==========================================================
-    # BUSCAR DATASET
+    # RUTAS DEL PROYECTO
     # ==========================================================
 
-    carpeta_raw = "data/raw"
-
-    archivos_csv = glob.glob(
-        os.path.join(
-            carpeta_raw,
-            "*.csv"
-        )
+    ruta_matricula = os.path.join(
+        "data",
+        "processed",
+        "conare_matricula_limpio.csv"
     )
 
-    if len(archivos_csv) == 0:
-
-        raise FileNotFoundError(
-            "No se encontró ningún archivo CSV "
-            "en data/raw."
-        )
-
-    if len(archivos_csv) > 1:
-
-        print(
-            "\nSe encontraron varios archivos CSV:"
-        )
-
-        for archivo in archivos_csv:
-
-            print(
-                f"- {archivo}"
-            )
-
-        raise ValueError(
-            "\nHay más de un CSV en data/raw. "
-            "Debemos identificar explícitamente "
-            "el dataset."
-        )
-
-    ruta_archivo = archivos_csv[0]
-
-    # ==========================================================
-    # RUTA DE SALIDA
-    # ==========================================================
-
-    ruta_salida = (
-        "data/processed/"
+    ruta_admision = os.path.join(
+        "data",
+        "processed",
         "conare_admision_limpio.csv"
     )
 
-    # ==========================================================
-    # CREAR GESTOR
-    # ==========================================================
+    ruta_graficos = os.path.join(
+        "data",
+        "resultados",
+        "graficos"
+    )
 
-    gestor = GestorDatos(
-        ruta_archivo
+    # Crear carpeta de gráficos si no existe
+    os.makedirs(
+        ruta_graficos,
+        exist_ok=True
     )
 
     # ==========================================================
-    # 1. CARGAR DATOS
+    # ETAPA 1 - ANÁLISIS EXPLORATORIO
     # ==========================================================
 
-    gestor.cargar_datos()
-
-    # ==========================================================
-    # 2. CORREGIR ENCABEZADOS
-    # ==========================================================
-
-    gestor.corregir_encabezados()
-
-    # ==========================================================
-    # 3. INFORMACIÓN GENERAL
-    # ==========================================================
-
-    gestor.mostrar_informacion_general()
-
-    # ==========================================================
-    # 4. ANALIZAR VALORES NULOS
-    # ==========================================================
-
-    gestor.analizar_nulos()
-
-    # ==========================================================
-    # 5. ANALIZAR REGISTROS CON VALORES NULOS
-    # ==========================================================
-
-    gestor.analizar_registros_nulos()
-
-    # ==========================================================
-    # 6. ANALIZAR DUPLICADOS
-    # ==========================================================
-
-    gestor.analizar_duplicados()
-
-    # ==========================================================
-    # 7. DIAGNÓSTICO DE CATEGORÍAS
-    # ==========================================================
-
-    gestor.diagnostico_categorias()
-
-    # ==========================================================
-    # 8. ANALIZAR RANGO DE EDAD
-    # ==========================================================
-
-    gestor.analizar_rango_edad()
-
-    # ==========================================================
-    # 9. LIMPIAR ESPACIOS
-    # ==========================================================
-
-    gestor.limpiar_espacios_texto()
-
-    # ==========================================================
-    # 10. CORREGIR RANGO DE EDAD
-    # ==========================================================
-
-    gestor.corregir_rango_edad()
-
-    # ==========================================================
-    # 11. TRATAR VALORES FALTANTES
-    # ==========================================================
-
-    gestor.tratar_valores_faltantes()
-
-    # ==========================================================
-    # 12. VALIDAR LIMPIEZA
-    # ==========================================================
-
-    gestor.validar_limpieza()
-
-    # ==========================================================
-    # 13. REVISIÓN FINAL
-    # ==========================================================
-
-    print("\n========================================")
-    print("REVISIÓN FINAL DE VALORES FALTANTES")
+    print("\n")
+    print("========================================")
+    print("ETAPA 1 - ANÁLISIS EXPLORATORIO")
     print("========================================")
 
-    nulos_finales = gestor.df.isnull().sum()
+    eda = ProcesadorEDA(
+        ruta_matricula=ruta_matricula,
+        ruta_admision=ruta_admision
+    )
 
-    nulos_finales = nulos_finales[
-        nulos_finales > 0
-    ]
+    eda.cargar_datasets()
 
-    if len(nulos_finales) == 0:
+    eda.informacion_general()
 
-        print(
-            "\nNo existen valores nulos "
-            "después de la limpieza."
-        )
+    eda.analizar_nulos()
 
-    else:
+    eda.analizar_duplicados()
 
-        print(
-            "\nValores nulos que permanecen:"
-        )
+    eda.estadistica_descriptiva()
 
-        print(
-            nulos_finales
-        )
+    eda.analizar_edad_matricula()
+
+    eda.analizar_categorias()
+
+    eda.analizar_periodo()
+
+    eda.analizar_universidades()
+
+    eda.analizar_tipo_matricula()
+
+    eda.analizar_stem()
+
+    eda.analizar_sexo()
+
+    eda.analizar_geografia()
+
+    eda.analizar_admision()
+
+    eda.resumen()
 
     # ==========================================================
-    # 14. ESTADO FINAL
+    # ETAPA 2 - VISUALIZACIÓN DEL EDA
     # ==========================================================
 
-    print("\n========================================")
-    print("ETAPA DE LIMPIEZA COMPLETADA")
+    print("\n")
+    print("========================================")
+    print("ETAPA 2 - VISUALIZACIÓN DEL EDA")
+    print("========================================")
+
+    visualizador = Visualizador(
+        ruta_matricula=ruta_matricula,
+        ruta_admision=ruta_admision,
+        ruta_salida=ruta_graficos
+    )
+
+    visualizador.cargar_datasets()
+
+    visualizador.generar_todas()
+
+    # ==========================================================
+    # ETAPA 3 - CARGA DE DATOS A SQL SERVER
+    # ==========================================================
+
+    print("\n")
+    print("========================================")
+    print("ETAPA 3 - CARGA DE DATOS A SQL SERVER")
+    print("========================================")
+
+    resultado_sql = cargar_datasets_sql()
+
+    print("\n")
+    print("========================================")
+    print("RESUMEN DE CARGA SQL")
     print("========================================")
 
     print(
-        "\nDataset procesado:"
-    )
-
-    print(
-        ruta_archivo
-    )
-
-    print(
-        "\nFilas finales: "
-        f"{gestor.df.shape[0]}"
-    )
-
-    print(
-        "Columnas finales: "
-        f"{gestor.df.shape[1]}"
-    )
-
-    print(
-        "\nRegistros eliminados: 0"
-    )
-
-    print(
-        "Duplicados eliminados: 0"
-    )
-
-    print(
-        "Categorías eliminadas: 0"
-    )
-
-    print(
-        "Registros con faltantes conservados: 59"
+        resultado_sql.to_string(
+            index=False
+        )
     )
 
     # ==========================================================
-    # 15. EXPORTAR DATASET LIMPIO
+    # ETAPA 4 - CONEXIÓN Y VERIFICACIÓN DE SQL SERVER
     # ==========================================================
 
-    gestor.exportar_datos(
-        ruta_salida
+    print("\n")
+    print("========================================")
+    print("ETAPA 4 - VERIFICACIÓN DE SQL SERVER")
+    print("========================================")
+
+    servidor = "localhost"
+    base_datos = "DesercionEstudiantil"
+
+    gestor_bd = GestorBaseDatos(
+        servidor=servidor,
+        base_datos=base_datos
     )
 
+    try:
+
+        gestor_bd.conectar()
+
+        # ------------------------------------------------------
+        # VER TABLAS DISPONIBLES
+        # ------------------------------------------------------
+
+        consulta_tablas = """
+
+        SELECT
+            TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_TYPE = 'BASE TABLE';
+
+        """
+
+        tablas = gestor_bd.ejecutar_consulta(
+            consulta_tablas
+        )
+
+        print("\nTablas disponibles en la base de datos:")
+
+        print(
+            tablas.to_string(
+                index=False
+            )
+        )
+
+        # ------------------------------------------------------
+        # CONTAR CONARE_Matricula
+        # ------------------------------------------------------
+
+        consulta_matricula = """
+
+        SELECT
+            COUNT(*) AS TOTAL_REGISTROS
+        FROM dbo.CONARE_Matricula;
+
+        """
+
+        cantidad_matricula = (
+            gestor_bd.ejecutar_consulta(
+                consulta_matricula
+            )
+        )
+
+        print(
+            "\nCantidad de registros en CONARE_Matricula:"
+        )
+
+        print(
+            cantidad_matricula.to_string(
+                index=False
+            )
+        )
+
+        # ------------------------------------------------------
+        # CONTAR CONARE_Admision
+        # ------------------------------------------------------
+
+        consulta_admision = """
+
+        SELECT
+            COUNT(*) AS TOTAL_REGISTROS
+        FROM dbo.CONARE_Admision;
+
+        """
+
+        cantidad_admision = (
+            gestor_bd.ejecutar_consulta(
+                consulta_admision
+            )
+        )
+
+        print(
+            "\nCantidad de registros en CONARE_Admision:"
+        )
+
+        print(
+            cantidad_admision.to_string(
+                index=False
+            )
+        )
+
+        # ------------------------------------------------------
+        # MUESTRA MATRÍCULA
+        # ------------------------------------------------------
+
+        print("\n--- MUESTRA CONARE_Matricula ---")
+
+        muestra_matricula = (
+            gestor_bd.ejecutar_consulta(
+                """
+                SELECT TOP 5 *
+                FROM dbo.CONARE_Matricula;
+                """
+            )
+        )
+
+        print(
+            muestra_matricula.to_string(
+                index=False
+            )
+        )
+
+        # ------------------------------------------------------
+        # MUESTRA ADMISIÓN
+        # ------------------------------------------------------
+
+        print("\n--- MUESTRA CONARE_Admision ---")
+
+        muestra_admision = (
+            gestor_bd.ejecutar_consulta(
+                """
+                SELECT TOP 5 *
+                FROM dbo.CONARE_Admision;
+                """
+            )
+        )
+
+        print(
+            muestra_admision.to_string(
+                index=False
+            )
+        )
+
+    finally:
+
+        gestor_bd.cerrar_conexion()
+
     # ==========================================================
-    # 16. CONFIRMACIÓN FINAL
+    # ETAPA 5 - ANÁLISIS ACADÉMICO
     # ==========================================================
 
-    print("\n========================================")
-    print("PROCESO FINALIZADO")
+    print("\n")
+    print("========================================")
+    print("ETAPA 5 - ANÁLISIS ACADÉMICO")
     print("========================================")
 
     print(
-        "\nEl dataset limpio fue guardado en:"
+        "\nEl módulo AnalizadorAcademico existe en el proyecto."
     )
 
     print(
-        ruta_salida
+        "Se mantiene disponible para la siguiente etapa "
+        "del análisis según las fuentes académicas definidas."
     )
+
+    # ==========================================================
+    # FINAL
+    # ==========================================================
+
+    print("\n")
+    print("========================================")
+    print("PROYECTO EJECUTADO CORRECTAMENTE")
+    print("========================================")
+
+    print("\nEtapas completadas:")
+
+    print("1. Carga de datasets procesados")
+    print("2. Análisis exploratorio de datos")
+    print("3. Análisis estadístico")
+    print("4. Análisis categórico")
+    print("5. Análisis temporal")
+    print("6. Análisis geográfico")
+    print("7. Análisis de admisión")
+    print("8. Generación de visualizaciones")
+    print("9. Carga de matrícula a SQL Server")
+    print("10. Carga de admisión a SQL Server")
+    print("11. Verificación de registros en SQL Server")
+    print("12. Verificación de datos cargados")
+
+    print("\nLos gráficos se encuentran en:")
+    print(ruta_graficos)
+
+    print("\n========================================")
 
 
 if __name__ == "__main__":
