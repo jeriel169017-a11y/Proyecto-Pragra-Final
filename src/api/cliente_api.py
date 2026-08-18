@@ -105,9 +105,13 @@ class DatosMatricula(BaseModel):
 @app.get("/")
 def raiz():
     return {"mensaje": "API Proyecto - Grupo 6", "modelos_cargados": MODELOS_CARGADOS}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "modelos_cargados": MODELOS_CARGADOS}
+
+
 @app.post("/predecir/nota_admision")
 def predecir_nota_admision(datos: DatosAdmision):
     if not MODELOS_CARGADOS:
