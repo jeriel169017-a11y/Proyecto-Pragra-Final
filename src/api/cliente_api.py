@@ -18,8 +18,6 @@ async def lifespan(app: FastAPI):
     global MODELO_CLASIFICACION, MODELO_REGRESION, MODELOS_CARGADOS
     ruta_clf = buscar_archivo("ml_clasificacion_nota.joblib", BASE_DIR)
     ruta_reg = buscar_archivo("ml_regresion_matriculados.joblib", BASE_DIR)
-    print("Ruta encontrada clasificacion:", ruta_clf)
-    print("Ruta encontrada regresion:", ruta_reg)
     if ruta_clf and ruta_reg:
         MODELO_CLASIFICACION = joblib.load(ruta_clf)
         MODELO_REGRESION = joblib.load(ruta_reg)
@@ -34,6 +32,7 @@ app = FastAPI(
     description="Sirven los dos modelos entrenados",
     version="1.0.0",
     lifespan=lifespan)
+class DatosAdmision(BaseModel):
     ANO_CONCURSO: int
     SEXO: str
     NACIONALIDAD: str
@@ -49,7 +48,6 @@ app = FastAPI(
     CANTON_COLEGIO: str
     TIPO_PROCESO_ADMISION: str
     CARRERA: str
-
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -71,8 +69,6 @@ app = FastAPI(
             }
         }
     )
-
-
 class DatosMatricula(BaseModel):
     AÑO: int
     UNIVERSIDAD: str
@@ -87,7 +83,6 @@ class DatosMatricula(BaseModel):
     AREA_UNESCO: str
     DISCIPLINA_UNESCO: str
     STEM_MICITT: str
-
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -107,8 +102,6 @@ class DatosMatricula(BaseModel):
             }
         }
     )
-
-
 @app.get("/")
 def raiz():
     return {"mensaje": "API Proyecto - Grupo 6", "modelos_cargados": MODELOS_CARGADOS}
