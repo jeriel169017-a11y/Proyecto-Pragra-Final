@@ -5,32 +5,35 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-MODELS = os.path.join(BASE_DIR, "models")
 MODELO_CLASIFICACION = None
 MODELO_REGRESION = None
 MODELOS_CARGADOS = False
+def buscar_archivo(nombre, carpeta_inicio):
+    for root, dirs, files in os.walk(carpeta_inicio):
+        if nombre in files:
+            return os.path.join(root, nombre)
+    return None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Se ejecuta al arrancar la API (reemplaza al @app.on_event("startup") deprecado)
     global MODELO_CLASIFICACION, MODELO_REGRESION, MODELOS_CARGADOS
-    ruta_clf = os.path.join(MODELS, "modelo_clasificacion_nota.joblib")
-    ruta_reg = os.path.join(MODELS, "modelo_regresion_matriculados.joblib")
-    if os.path.exists(ruta_clf) and os.path.exists(ruta_reg):
+    ruta_clf = buscar_archivo("ml_clasificacion_nota.joblib", BASE_DIR)
+    ruta_reg = buscar_archivo("ml_regresion_matriculados.joblib", BASE_DIR)
+    print("Ruta encontrada clasificacion:", ruta_clf)
+    print("Ruta encontrada regresion:", ruta_reg)
+    if ruta_clf and ruta_reg:
         MODELO_CLASIFICACION = joblib.load(ruta_clf)
         MODELO_REGRESION = joblib.load(ruta_reg)
         MODELOS_CARGADOS = True
         print("Modelos cargados correctamente.")
     else:
         MODELOS_CARGADOS = False
-        print("AVISO: no se encontraron los .joblib en 'models/'.""Ejecute primero src/modelos/modelos.py para generarlos.")
+        print("AVISO: no se encontraron los .joblib en ninguna subcarpeta de", BASE_DIR)
     yield
 app = FastAPI(
     title="API Proyecto - Grupo 6",
     description="Sirven los dos modelos entrenados",
     version="1.0.0",
     lifespan=lifespan)
-# ESQUEMAS DE ENTRADA (mismas columnas que "features" y "features_r" en modelos.py, sin agregar ni quitar ninguna)
-class DatosAdmision(BaseModel):
     ANO_CONCURSO: int
     SEXO: str
     NACIONALIDAD: str
@@ -46,6 +49,7 @@ class DatosAdmision(BaseModel):
     CANTON_COLEGIO: str
     TIPO_PROCESO_ADMISION: str
     CARRERA: str
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -53,20 +57,22 @@ class DatosAdmision(BaseModel):
                 "SEXO": "Mujer",
                 "NACIONALIDAD": "Costarricense",
                 "RANGO_EDAD": "17-18",
-                "PROVINCIA_RESIDENCIA": "San José",
-                "CANTON_RESIDENCIA": "Cantón A",
+                "PROVINCIA_RESIDENCIA": "San Jose",
+                "CANTON_RESIDENCIA": "Canton A",
                 "SEDE": "Sede Central",
                 "RECINTO": "Recinto A",
-                "TIPO_COLEGIO": "Público",
+                "TIPO_COLEGIO": "Publico",
                 "TIPO_HORARIO_COLEGIO": "Diurno",
-                "TIPO_MODALIDAD_COLEGIO": "Académico",
-                "PROVINCIA_COLEGIO": "San José",
-                "CANTON_COLEGIO": "Cantón A",
-                "TIPO_PROCESO_ADMISION": "Examen de admisión",
-                "CARRERA": "Ingeniería en Sistemas",
+                "TIPO_MODALIDAD_COLEGIO": "Academico",
+                "PROVINCIA_COLEGIO": "San Jose",
+                "CANTON_COLEGIO": "Canton A",
+                "TIPO_PROCESO_ADMISION": "Examen de admision",
+                "CARRERA": "Ingenieria en Sistemas",
             }
         }
     )
+
+
 class DatosMatricula(BaseModel):
     AÑO: int
     UNIVERSIDAD: str
@@ -81,26 +87,28 @@ class DatosMatricula(BaseModel):
     AREA_UNESCO: str
     DISCIPLINA_UNESCO: str
     STEM_MICITT: str
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "AÑO": 2025,
                 "UNIVERSIDAD": "UCR",
-                "CARRERA": "Ingeniería en Sistemas",
+                "CARRERA": "Ingenieria en Sistemas",
                 "REGION_PLANIFICACION_SEDE": "Central",
-                "GAM_SEDE": "Sí",
+                "GAM_SEDE": "Si",
                 "GRADO_ACADEMICO": "Bachillerato",
                 "NIVEL_ACADEMICO": "Grado",
                 "NIVEL_CINE": "6",
-                "AREA_CONOCIMIENTO": "Ingeniería",
-                "DISCIPLINA": "Ingeniería en Sistemas",
-                "AREA_UNESCO": "Ingeniería, Industria y Construcción",
-                "DISCIPLINA_UNESCO": "Informática",
-                "STEM_MICITT": "Sí",
+                "AREA_CONOCIMIENTO": "Ingenieria",
+                "DISCIPLINA": "Ingenieria en Sistemas",
+                "AREA_UNESCO": "Ingenieria, Industria y Construccion",
+                "DISCIPLINA_UNESCO": "Informatica",
+                "STEM_MICITT": "Si",
             }
         }
     )
-# ENDPOINTS
+
+
 @app.get("/")
 def raiz():
     return {"mensaje": "API Proyecto - Grupo 6", "modelos_cargados": MODELOS_CARGADOS}
@@ -110,7 +118,7 @@ def health():
 @app.post("/predecir/nota_admision")
 def predecir_nota_admision(datos: DatosAdmision):
     if not MODELOS_CARGADOS:
-        raise HTTPException(status_code=503, detail="El modelo de clasificación no está disponible todavía.")
+        raise HTTPException(status_code=503, detail="El modelo de clasificacion no esta disponible todavia.")
     try:
         fila = pd.DataFrame([datos.model_dump()])
         prediccion = MODELO_CLASIFICACION.predict(fila)[0]
@@ -120,14 +128,13 @@ def predecir_nota_admision(datos: DatosAdmision):
 @app.post("/predecir/matriculados")
 def predecir_matriculados(datos: DatosMatricula):
     if not MODELOS_CARGADOS:
-        raise HTTPException(status_code=503, detail="El modelo de regresión no está disponible todavía.")
+        raise HTTPException(status_code=503, detail="El modelo de regresion no esta disponible todavia.")
     try:
         fila = pd.DataFrame([datos.model_dump()])
         prediccion = MODELO_REGRESION.predict(fila)[0]
         return {"matriculados_predicho": round(float(prediccion), 1)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-# Arranque directo (para poder correr este archivo con el botón de PyCharm, sin necesitar el comando "uvicorn" a mano)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
